@@ -1,15 +1,16 @@
-import os
-from telethon import TelegramClient, events
+from telethon import TelegramClient
 from telethon.sessions import StringSession
 
-API_ID = int(os.environ["API_ID"])
-API_HASH = os.environ["API_HASH"]
-STRING_SESSION = os.environ["STRING_SESSION"]
+from config import *
+from database import Database
 
-AUTO_REPLY = os.getenv(
-    "AUTO_REPLY",
-    "👋 Xin chào!\n\nMình đã nhận được tin nhắn của bạn.\nHiện mình đang bận nên chưa thể trả lời ngay.\nVui lòng để lại nội dung, mình sẽ phản hồi sớm."
-)
+db = Database(DATABASE_NAME)
+
+if db.get_setting("enabled") is None:
+    db.set_setting("enabled", "1")
+
+if db.get_setting("current_block") is None:
+    db.set_setting("current_block", DEFAULT_BLOCK)
 
 client = TelegramClient(
     StringSession(STRING_SESSION),
@@ -17,30 +18,29 @@ client = TelegramClient(
     API_HASH
 )
 
-replied = set()
 
-@client.on(events.NewMessage(incoming=True))
-async def handler(event):
-    if not event.is_private:
-        return
+async def startup():
 
-    sender = await event.get_sender()
+    me = await client.get_me()
 
-    if sender.bot:
-        return
+    print("=" * 50)
+    print("Telegram Auto Reply V2")
+    print("=" * 50)
+    print(f"User      : {me.first_name}")
+    print(f"Username  : @{me.username}")
+    print(f"User ID   : {me.id}")
+    print(f"Current   : {db.get_setting('current_block')}")
+    print("=" * 50)
 
-    if sender.contact:
-        return
-
-    if sender.id in replied:
-        return
-
-    await event.reply(AUTO_REPLY)
-    replied.add(sender.id)
 
 async def main():
-    print("✅ Userbot started")
+
+    await startup()
+
+    print("Userbot Started.")
+
     await client.run_until_disconnected()
+
 
 with client:
     client.loop.run_until_complete(main())
