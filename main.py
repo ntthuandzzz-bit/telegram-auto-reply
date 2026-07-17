@@ -1,30 +1,30 @@
-from telethon import TelegramClient, events
-from telethon.tl.types import User
 import os
+from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 
-api_id = int(os.getenv("API_ID"))
-api_hash = os.getenv("API_HASH")
+API_ID = int(os.environ["API_ID"])
+API_HASH = os.environ["API_HASH"]
+STRING_SESSION = os.environ["STRING_SESSION"]
 
-client = TelegramClient("session", api_id, api_hash)
+AUTO_REPLY = os.getenv(
+    "AUTO_REPLY",
+    "👋 Xin chào!\n\nMình đã nhận được tin nhắn của bạn.\nHiện mình đang bận nên chưa thể trả lời ngay.\nVui lòng để lại nội dung, mình sẽ phản hồi sớm."
+)
 
-AUTO_REPLY = """👋 Xin chào!
-
-Mình đã nhận được tin nhắn của bạn.
-
-Hiện mình chưa thể trả lời ngay. Vui lòng để lại nội dung, mình sẽ phản hồi sớm nhất.
-"""
+client = TelegramClient(
+    StringSession(STRING_SESSION),
+    API_ID,
+    API_HASH
+)
 
 replied = set()
 
 @client.on(events.NewMessage(incoming=True))
-async def auto_reply(event):
+async def handler(event):
     if not event.is_private:
         return
 
     sender = await event.get_sender()
-
-    if not isinstance(sender, User):
-        return
 
     if sender.bot:
         return
@@ -38,6 +38,9 @@ async def auto_reply(event):
     await event.reply(AUTO_REPLY)
     replied.add(sender.id)
 
-client.start()
-print("Userbot is running...")
-client.run_until_disconnected()
+async def main():
+    print("✅ Userbot started")
+    await client.run_until_disconnected()
+
+with client:
+    client.loop.run_until_complete(main())
